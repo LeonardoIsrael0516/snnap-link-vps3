@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  emailVerified  DateTime?
+  image          String?
+  role           UserRole        @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  aiPages        AiPage[]
+  systemSettings SystemSetting[]
+  userPlan       UserPlan?
+  creditTransactions CreditTransaction[]
+
+  @@map("users")
+}
+
+model AiPage {
+  id                   String   @id @default(cuid())
+  title                String
+  slug                 String   @unique
+  htmlContent          String
+  thumbnailUrl         String?
+  views                Int      @default(0)
+  userId               String
+  faviconUrl           String?
+  metaTitle            String?
+  metaDescription      String?
+  ogTitle              String?
+  ogDescription        String?
+  ogImage              String?
+  customCss            String?
+  pageTitle            String?
+  pageDescription      String?
+  keywords             String?
+  canonicalUrl         String?
+  robots               String?  @default("index,follow")
+  facebookPixel        String?
+  googleAnalytics      String?
+  googleTagManager     String?
+  tiktokPixel          String?
+  linkedinPixel        String?
+  twitterPixel         String?
+  customHead           String?
+  customBody           String?
+  customFooter         String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  pwaBackgroundColor   String?  @default("#ffffff")
+  pwaDescription       String?
+  pwaDisplayMode       String?  @default("standalone")
+  pwaEnabled           Boolean  @default(false)
+  pwaIconUrl           String?
+  pwaName              String?
+  pwaScope             String?
+  pwaShortName         String?
+  pwaStartUrl          String?
+  pwaThemeColor        String?  @default("#000000")
+  pwaShowInstallPrompt Boolean  @default(true)
+  customDomainId       String?
+  pwaShortcuts         Json?    @default("[]")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_pages")
+}
+
+model CustomDomain {
+  id           String             @id @default(cuid())
+  userId       String
+  domain       String             @unique
+  type         CustomDomainType
+  status       CustomDomainStatus @default(PENDING)
+  cnameTarget  String
+  verifiedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  isApex       Boolean            @default(false)
+  serverIp     String?
+  slug         String?
+  isRootDomain Boolean            @default(false)
+  pageId       String?
+
+  @@map("custom_domains")
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("system_settings")
+}
+
+model StorageConfig {
+  id         String   @id @default(cuid())
+  provider   String
+  uploadUrl  String
+  endpoint   String
+  accessKey  String
+  secretKey  String
+  bucketName String
+  region     String
+  isActive   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("storage_configs")
+}
+
+model UploadedFile {
+  id         String   @id @default(cuid())
+  filename   String
+  key        String
+  url        String
+  size       Int
+  mimeType   String
+  storageKey String
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@map("uploaded_files")
+}
+
+model PageView {
+  id              String   @id @default(cuid())
+  pageId          String
+  pageType        PageType
+  userId          String?
+  sessionId       String?
+  visitorId       String?
+  country         String?
+  countryCode     String?
+  region          String?
+  city            String?
+  timezone        String?
+  latitude        Float?
+  longitude       Float?
+  device          String?
+  deviceType      String?
+  os              String?
+  osVersion       String?
+  browser         String?
+  browserVersion  String?
+  language        String?
+  referrer        String?
+  referrerDomain  String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmTerm         String?
+  utmContent      String?
+  screenWidth     Int?
+  screenHeight    Int?
+  viewportWidth   Int?
+  viewportHeight  Int?
+  colorDepth      Int?
+  pixelRatio      Float?
+  isNewSession    Boolean  @default(true)
+  isNewVisitor    Boolean  @default(true)
+  sessionDuration Int?
+  pageLoadTime    Int?
+  previousPage    String?
+  nextPage        String?
+  exitPage        Boolean  @default(false)
+  bounce          Boolean  @default(false)
+  userAgent       String?
+  ipAddress       String?
+  isBot           Boolean  @default(false)
+  isMobile        Boolean  @default(false)
+  isTablet        Boolean  @default(false)
+  isDesktop       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([pageId, pageType])
+  @@index([createdAt])
+  @@index([country])
+  @@index([device])
+  @@index([os])
+  @@index([browser])
+  @@index([referrerDomain])
+  @@index([utmSource])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([pageId, pageType], map: "idx_page_views_page_id_type")
+  @@map("page_views")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum CustomDomainType {
+  LINK_AI
+  BIOLINK
+}
+
+enum CustomDomainStatus {
+  PENDING
+  ACTIVE
+  FAILED
+}
+
+// ========================================
+// MODELOS DE PLANOS E CRÉDITOS (do banco principal)
+// ========================================
+
+model Plan {
+  id                    String    @id @default(cuid())
+  name                  String
+  description           String?   @db.Text
+  price                 Float
+  currency              String    @default("BRL")
+  monthlyCredits        Int       // Créditos mensais para criação de páginas
+  customDomainsLimit    Int       @default(0) // 0 = nenhum, -1 = ilimitado
+  pwaEnabled            Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  stripePriceId         String?   // ID do preço no Stripe (para integração futura)
+  features              Json?     @default("[]") // Array de features adicionais
+  displayOrder          Int       @default(0)
+  isPopular             Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  userPlans             UserPlan[]
+
+  @@map("plans")
+}
+
+model UserPlan {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  planId                String
+  status                UserPlanStatus @default(ACTIVE)
+  creditsAvailable      Float     // Créditos disponíveis no momento
+  creditsUsed           Float     @default(0)
+  creditsTotal          Float     // Total de créditos no ciclo atual
+  currentPeriodStart    DateTime  @default(now())
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean   @default(false)
+  stripeSubscriptionId  String?   // ID da subscription no Stripe
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                  Plan      @relation(fields: [planId], references: [id])
+
+  @@map("user_plans")
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+model CreditPackage {
+  id              String              @id @default(cuid())
+  name            String
+  description     String?             @db.Text
+  credits         Int                 // Quantidade de créditos
+  price           Float
+  currency        String              @default("BRL")
+  discount        Float?              // Porcentagem de desconto (opcional)
+  stripePriceId   String?             // ID do preço no Stripe
+  isActive        Boolean             @default(true)
+  displayOrder    Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  transactions    CreditTransaction[]
+
+  @@map("credit_packages")
+}
+
+model CreditTransaction {
+  id              String                  @id @default(cuid())
+  userId          String
+  type            CreditTransactionType
+  amount          Float                   // Quantidade de créditos (positivo = adição, negativo = uso)
+  balance         Float                   // Saldo após a transação
+  description     String
+  reference       String?                 // Referência (ex: ID da página criada)
+  packageId       String?                 // Se foi compra de pacote
+  stripePaymentId String?                 // ID do pagamento no Stripe
+  createdAt       DateTime                @default(now())
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditPackage   CreditPackage?          @relation(fields: [packageId], references: [id])
+
+  @@map("credit_transactions")
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum UserPlanStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAUSED
+}
+
+enum CreditTransactionType {
+  MONTHLY_RESET        // Reset mensal de créditos
+  PACKAGE_PURCHASE     // Compra de pacote de créditos
+  PAGE_CREATION        // Uso de crédito para criar página
+  PAGE_EDIT            // Uso de crédito para editar página
+  TEMPLATE_IMPORT      // Uso de crédito para importar template
+  ADMIN_ADJUSTMENT     // Ajuste manual pelo admin
+  REFUND               // Reembolso
+}
+
+enum PageType {
+  AI_PAGE
+  BIOLINK
+  SHORTLINK
+}
