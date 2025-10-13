@@ -14,25 +14,11 @@ console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]
 
 if (process.env.NODE_ENV === 'production') {
   // Em produção, criar uma única instância
-  prisma = new PrismaClient({
-    log: ['error'],
-    datasources: {
-      db: {
-        url: DATABASE_URL
-      }
-    }
-  });
+  prisma = new PrismaClient();
 } else {
   // Em desenvolvimento, usar global para evitar múltiplas instâncias durante hot reload
   if (!global.__prisma) {
-    global.__prisma = new PrismaClient({
-      log: ['query', 'error', 'warn'],
-      datasources: {
-        db: {
-          url: DATABASE_URL
-        }
-      }
-    });
+    global.__prisma = new PrismaClient();
   }
   prisma = global.__prisma;
 }
