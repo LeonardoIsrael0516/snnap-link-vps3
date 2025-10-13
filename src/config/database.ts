@@ -19,9 +19,10 @@ if (process.env.NODE_ENV === 'production' && DATABASE_URL) {
     const url = new URL(DATABASE_URL);
     
     // Parâmetros otimizados para produção (funciona com qualquer provedor)
-    url.searchParams.set('connection_limit', '5');
-    url.searchParams.set('pool_timeout', '20');
-    url.searchParams.set('connect_timeout', '60');
+    url.searchParams.set('connection_limit', '2');
+    url.searchParams.set('pool_timeout', '10');
+    url.searchParams.set('connect_timeout', '30');
+    url.searchParams.set('socket_timeout', '30');
     // Preserva a porta original da DATABASE_URL
     // Funciona com Supabase, AWS RDS, PostgreSQL, etc.
     
