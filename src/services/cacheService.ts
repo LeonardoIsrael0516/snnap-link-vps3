@@ -6,51 +6,63 @@ class CacheService {
 
   constructor() {
     // Tentar REDIS_URL primeiro, depois variáveis separadas do Upstash
-    let redisConfig;
-    
     if (process.env.REDIS_URL) {
-      redisConfig = process.env.REDIS_URL;
       console.log('✅ Redis: Usando REDIS_URL');
+      this.redis = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: 3,
+        enableAutoPipelining: true,
+        enableOfflineQueue: false,
+        enableReadyCheck: false,
+        retryStrategy: (times) => {
+          if (times > 3) {
+            console.error('❌ Redis: Máximo de tentativas de reconexão atingido');
+            return null;
+          }
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        reconnectOnError: (err) => {
+          if (err.message.includes('SETINFO')) {
+            return false;
+          }
+          console.error('⚠️  Redis: Erro de conexão, tentando reconectar...', err.message);
+          return true;
+        },
+      });
     } else if (process.env.REDIS_HOST && process.env.REDIS_PORT && process.env.REDIS_PASSWORD) {
-      // Construir URL do Upstash
-      redisConfig = {
+      console.log('✅ Redis: Usando variáveis separadas do Upstash');
+      this.redis = new Redis({
         host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT),
         password: process.env.REDIS_PASSWORD,
         tls: {
           servername: process.env.REDIS_HOST
-        }
-      };
-      console.log('✅ Redis: Usando variáveis separadas do Upstash');
+        },
+        maxRetriesPerRequest: 3,
+        enableAutoPipelining: true,
+        enableOfflineQueue: false,
+        enableReadyCheck: false,
+        retryStrategy: (times) => {
+          if (times > 3) {
+            console.error('❌ Redis: Máximo de tentativas de reconexão atingido');
+            return null;
+          }
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        reconnectOnError: (err) => {
+          if (err.message.includes('SETINFO')) {
+            return false;
+          }
+          console.error('⚠️  Redis: Erro de conexão, tentando reconectar...', err.message);
+          return true;
+        },
+      });
     } else {
       console.warn('⚠️  Redis não configurado (REDIS_URL ou REDIS_HOST/PORT/PASSWORD), cache desabilitado');
       this.redis = null as any;
       return;
     }
-    
-    this.redis = new Redis(redisConfig, {
-      maxRetriesPerRequest: 3,
-      enableAutoPipelining: true,
-      enableOfflineQueue: false,
-      // Desabilitar SETINFO para compatibilidade com Redis antigo
-      enableReadyCheck: false,
-      retryStrategy: (times) => {
-        if (times > 3) {
-          console.error('❌ Redis: Máximo de tentativas de reconexão atingido');
-          return null;
-        }
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      reconnectOnError: (err) => {
-        // Ignorar erros de SETINFO
-        if (err.message.includes('SETINFO')) {
-          return false;
-        }
-        console.error('⚠️  Redis: Erro de conexão, tentando reconectar...', err.message);
-        return true;
-      },
-    });
 
     this.redis.on('connect', () => {
       console.log('✅ Redis: Conectado com sucesso');
