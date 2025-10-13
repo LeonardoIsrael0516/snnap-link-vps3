@@ -5,8 +5,12 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-// Banco de dados do microserviço com configurações de connection pooling
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahozo.supabase.co:5432/postgres?connection_limit=5&pool_timeout=20&prepared_statements=false";
+// Banco de dados do microserviço - URL vem da variável de ambiente
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  throw new Error('❌ DATABASE_URL não está definida nas variáveis de ambiente');
+}
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
