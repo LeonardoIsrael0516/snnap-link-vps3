@@ -84,7 +84,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
             pwaScope: true,
             pwaShowInstallPrompt: true,
           }
-        });
+        }));
       } else if (!customDomain.isRootDomain && slug === customDomain.slug) {
         // Subdomain with specific slug (e.g., minhapage.meudominio.com)
         aiPage = await executeWithRetry(() => prisma.aiPage.findUnique({
@@ -130,7 +130,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
             pwaScope: true,
             pwaShowInstallPrompt: true,
           }
-        });
+        }));
       }
     } else {
       // Regular slug-based access
@@ -218,7 +218,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     await executeWithRetry(() => prisma.aiPage.update({
       where: { id: aiPage.id },
       data: { views: { increment: 1 } }
-    });
+    }));
 
     // Generate meta tags
     const generateMetaTags = () => {
