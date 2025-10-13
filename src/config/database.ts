@@ -11,8 +11,11 @@ const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahoz
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
 // Configuração para evitar prepared statements duplicados
+const productionLog = ['error'];
+const developmentLog = ['query', 'error', 'warn'];
+
 const prismaOptions = {
-  log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+  log: process.env.NODE_ENV === 'production' ? productionLog : developmentLog,
 };
 
 // Criar uma única instância global do Prisma Client
