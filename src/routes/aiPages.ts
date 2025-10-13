@@ -10,6 +10,52 @@ import { hasCredits, consumeCredits, calculatePageCreationCost } from '../servic
 
 const router = Router();
 
+// Função para sincronizar página com o backend principal
+async function syncPageToMainBackend(page: any, userId: string): Promise<void> {
+  try {
+    const backendUrl = process.env.BACKEND_URL || 'https://snnap-backend.onrender.com';
+    const syncUrl = `${backendUrl}/api/ai-pages/sync`;
+    
+    console.log(`🔄 Enviando página ${page.id} para sincronização no backend: ${syncUrl}`);
+    
+    const response = await fetch(syncUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INTERNAL_API_KEY || 'internal-sync-key'}`
+      },
+      body: JSON.stringify({
+        id: page.id,
+        title: page.title,
+        slug: page.slug,
+        htmlContent: page.htmlContent,
+        metaTitle: page.metaTitle,
+        metaDescription: page.metaDescription,
+        ogTitle: page.ogTitle,
+        ogDescription: page.ogDescription,
+        ogImage: page.ogImage,
+        faviconUrl: page.faviconUrl,
+        customCss: page.customCss,
+        thumbnailUrl: page.thumbnailUrl,
+        userId: userId,
+        createdAt: page.createdAt,
+        updatedAt: page.updatedAt
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Backend sync failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Página ${page.id} sincronizada com sucesso:`, result);
+  } catch (error) {
+    console.error(`❌ Erro na sincronização da página ${page.id}:`, error);
+    throw error;
+  }
+}
+
 const createPageSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   prompt: z.string().optional(), // Opcional para criação direta
@@ -361,6 +407,16 @@ router.post('/', verifyJWT, ensureUserExists, async (req: Request, res: Response
         console.log(`✅ Créditos consumidos: ${cost} créditos para página ${page.id}`);
         console.log(`✅ Novo saldo: ${creditResult.newBalance} créditos`);
       }
+    }
+
+    // Sincronizar página com o backend principal
+    try {
+      console.log(`🔄 Sincronizando página ${page.id} com o backend principal...`);
+      await syncPageToMainBackend(page, userId);
+      console.log(`✅ Página ${page.id} sincronizada com sucesso!`);
+    } catch (syncError) {
+      console.error(`❌ Erro ao sincronizar página ${page.id}:`, syncError);
+      // Não falhar a criação da página por causa da sincronização
     }
 
     // Convert to format expected by frontend
