@@ -1,7 +1,25 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '../config/database';
+import { prisma, reconnectPrisma } from '../config/database';
 import { cacheService } from '../services/cacheService';
 import { injectAnalyticsScript } from '../lib/analytics-client';
+
+// Função para executar queries Prisma com retry
+async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      if (error.message?.includes('prepared statement') && attempt < maxRetries) {
+        console.log(`🔄 Tentativa ${attempt} falhou, reconectando...`);
+        await reconnectPrisma();
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Wait before retry
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
 
 const router = Router();
 
@@ -23,7 +41,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
       
       if (customDomain.isRootDomain && slug === 'root') {
         // Root domain access (e.g., meudominio.com)
-        aiPage = await prisma.aiPage.findUnique({
+        aiPage = await executeWithRetry(() => prisma.aiPage.findUnique({
           where: { id: customDomain.pageId },
           select: {
             id: true,
@@ -69,7 +87,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
         });
       } else if (!customDomain.isRootDomain && slug === customDomain.slug) {
         // Subdomain with specific slug (e.g., minhapage.meudominio.com)
-        aiPage = await prisma.aiPage.findUnique({
+        aiPage = await executeWithRetry(() => prisma.aiPage.findUnique({
           where: { id: customDomain.pageId },
           select: {
             id: true,
@@ -120,7 +138,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
       
       console.log(`🔍 SSR: Buscando página '${slug}' no banco...`);
       
-      aiPage = await prisma.aiPage.findUnique({
+      aiPage = await executeWithRetry(() => prisma.aiPage.findUnique({
         where: { slug },
         select: {
           id: true,
@@ -163,7 +181,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
           pwaScope: true,
           pwaShowInstallPrompt: true,
         }
-      });
+      }));
     }
 
     // Tentar buscar HTML renderizado do cache
@@ -197,7 +215,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     }
 
     // Increment views
-    await prisma.aiPage.update({
+    await executeWithRetry(() => prisma.aiPage.update({
       where: { id: aiPage.id },
       data: { views: { increment: 1 } }
     });

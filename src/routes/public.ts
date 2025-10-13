@@ -1,5 +1,23 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '../config/database';
+import { prisma, reconnectPrisma } from '../config/database';
+
+// Função para executar queries Prisma com retry
+async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      if (error.message?.includes('prepared statement') && attempt < maxRetries) {
+        console.log(`🔄 Tentativa ${attempt} falhou, reconectando...`);
+        await reconnectPrisma();
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Wait before retry
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
 
 const router = Router();
 
@@ -9,7 +27,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     const { slug } = req.params;
 
     // Find AI page by slug
-    const aiPage = await prisma.aiPage.findUnique({
+    const aiPage = await executeWithRetry(() => prisma.aiPage.findUnique({
       where: { slug },
       select: {
         id: true,
@@ -25,14 +43,14 @@ router.get('/:slug', async (req: Request, res: Response) => {
         views: true,
         createdAt: true,
       }
-    });
+    }));
 
     if (aiPage) {
       // Increment views for AI page
-      await prisma.aiPage.update({
+      await executeWithRetry(() => prisma.aiPage.update({
         where: { slug },
         data: { views: { increment: 1 } }
-      });
+      }));
 
       return res.json({
         type: "ai-page",

@@ -5,17 +5,36 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-// Banco de dados do microserviço
-const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahozo.supabase.co:5432/postgres";
+// Banco de dados do microserviço com configurações de connection pooling
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahozo.supabase.co:5432/postgres?connection_limit=5&pool_timeout=20&prepared_statements=false";
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
-// Criar uma única instância global do Prisma Client (sem configuração de log para evitar problemas de tipos)
-const prisma = global.__prisma || new PrismaClient();
+// Criar uma única instância global do Prisma Client com configurações para produção
+const prisma = global.__prisma || new PrismaClient({
+  datasources: {
+    db: {
+      url: DATABASE_URL
+    }
+  },
+  // Configurações para evitar problemas de prepared statements em produção
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error']
+});
 
 // Em desenvolvimento, salvar na global para evitar múltiplas instâncias
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
+}
+
+// Função para reconectar em caso de erro
+async function reconnectPrisma() {
+  try {
+    await prisma.$disconnect();
+    console.log('🔄 Reconectando ao banco de dados...');
+    // A nova instância será criada automaticamente na próxima importação
+  } catch (error) {
+    console.error('❌ Erro ao reconectar:', error);
+  }
 }
 
 // Graceful shutdown
@@ -33,4 +52,12 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-export { prisma };
+// Tratar erros de conexão
+process.on('uncaughtException', async (error) => {
+  if (error.message.includes('prepared statement') || error.message.includes('connection')) {
+    console.error('🔄 Erro de conexão detectado, tentando reconectar...');
+    await reconnectPrisma();
+  }
+});
+
+export { prisma, reconnectPrisma };
