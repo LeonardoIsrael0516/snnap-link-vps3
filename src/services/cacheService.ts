@@ -5,7 +5,13 @@ class CacheService {
   private isConnected: boolean = false;
 
   constructor() {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const redisUrl = process.env.REDIS_URL;
+    
+    if (!redisUrl) {
+      console.warn('⚠️  REDIS_URL não configurada, cache desabilitado');
+      this.redis = null as any;
+      return;
+    }
     
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
@@ -51,14 +57,14 @@ class CacheService {
    * Verifica se o Redis está conectado
    */
   isReady(): boolean {
-    return this.isConnected && this.redis.status === 'ready';
+    return this.redis && this.isConnected && this.redis.status === 'ready';
   }
 
   /**
    * Obtém um valor do cache
    */
   async get<T>(key: string): Promise<T | null> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       console.warn('⚠️  Redis não disponível, pulando cache');
       return null;
     }
@@ -78,7 +84,7 @@ class CacheService {
    * Define um valor no cache com TTL
    */
   async set(key: string, value: any, ttlSeconds: number = 300): Promise<boolean> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       console.warn('⚠️  Redis não disponível, pulando cache');
       return false;
     }
@@ -97,7 +103,7 @@ class CacheService {
    * Deleta um valor do cache
    */
   async del(key: string): Promise<boolean> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return false;
     }
 
@@ -114,7 +120,7 @@ class CacheService {
    * Deleta múltiplas chaves por padrão
    */
   async delPattern(pattern: string): Promise<number> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return 0;
     }
 
@@ -134,7 +140,7 @@ class CacheService {
    * Incrementa um contador (para rate limiting)
    */
   async increment(key: string, ttlSeconds: number = 60): Promise<number> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return 0;
     }
 
@@ -155,7 +161,7 @@ class CacheService {
    * Obtém TTL de uma chave
    */
   async ttl(key: string): Promise<number> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return -1;
     }
 
@@ -171,7 +177,7 @@ class CacheService {
    * Limpa todo o cache
    */
   async flushAll(): Promise<boolean> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return false;
     }
 
@@ -189,7 +195,7 @@ class CacheService {
    * Obtém estatísticas do Redis
    */
   async getStats(): Promise<any> {
-    if (!this.isReady()) {
+    if (!this.redis || !this.isReady()) {
       return { connected: false };
     }
 
@@ -216,8 +222,10 @@ class CacheService {
    * Fecha a conexão com o Redis
    */
   async close(): Promise<void> {
-    await this.redis.quit();
-    console.log('👋 Redis: Conexão fechada');
+    if (this.redis) {
+      await this.redis.quit();
+      console.log('👋 Redis: Conexão fechada');
+    }
   }
 }
 
