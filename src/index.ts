@@ -36,7 +36,7 @@ app.use(helmet({
       childSrc: ["'self'", "https:", "http:", "data:", "blob:"],
       workerSrc: ["'self'", "blob:"],
       // Permitir que o frontend carregue páginas em iframes
-      frameAncestors: ["'self'", "http://localhost:8080", "http://localhost:3000", "https://snnap-frontend.onrender.com", "https://snnap-frontend.vercel.app"],
+      frameAncestors: ["'self'", "http://localhost:8080", "http://localhost:3000", "https://snnap.com", "https://www.snnap.com", "https://snnap-frontend.onrender.com", "https://snnap-backend.onrender.com"],
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -48,7 +48,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8080', 'http://localhost:3000', 'https://snnap-frontend.onrender.com', 'https://snnap-frontend.vercel.app'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8080', 'http://localhost:3000', 'https://snnap.com', 'https://www.snnap.com', 'https://snnap-frontend.onrender.com', 'https://snnap-backend.onrender.com'],
   credentials: true
 }));
 app.use(morgan('combined'));
