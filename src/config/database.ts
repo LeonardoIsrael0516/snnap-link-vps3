@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-// Singleton pattern para evitar múltiplas instâncias do Prisma Client
+// Singleton pattern mais robusto para evitar múltiplas instâncias
 let prisma: PrismaClient;
 
 declare global {
@@ -12,13 +12,24 @@ const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahoz
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
+// Função para criar uma única instância do Prisma Client
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+  });
+}
+
+// Implementação do singleton
 if (process.env.NODE_ENV === 'production') {
-  // Em produção, criar uma única instância
-  prisma = new PrismaClient();
+  // Em produção, usar uma variável global mais robusta
+  if (!global.__prisma) {
+    global.__prisma = createPrismaClient();
+  }
+  prisma = global.__prisma;
 } else {
   // Em desenvolvimento, usar global para evitar múltiplas instâncias durante hot reload
   if (!global.__prisma) {
-    global.__prisma = new PrismaClient();
+    global.__prisma = createPrismaClient();
   }
   prisma = global.__prisma;
 }
