@@ -1,8 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-// Singleton pattern mais robusto para evitar múltiplas instâncias
-let prisma: PrismaClient;
-
+// Solução mais drástica: usar uma única instância global
 declare global {
   var __prisma: PrismaClient | undefined;
 }
@@ -12,26 +10,14 @@ const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahoz
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
-// Função para criar uma única instância do Prisma Client
-function createPrismaClient(): PrismaClient {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
-  });
-}
+// Criar uma única instância global do Prisma Client
+const prisma = global.__prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+});
 
-// Implementação do singleton
-if (process.env.NODE_ENV === 'production') {
-  // Em produção, usar uma variável global mais robusta
-  if (!global.__prisma) {
-    global.__prisma = createPrismaClient();
-  }
-  prisma = global.__prisma;
-} else {
-  // Em desenvolvimento, usar global para evitar múltiplas instâncias durante hot reload
-  if (!global.__prisma) {
-    global.__prisma = createPrismaClient();
-  }
-  prisma = global.__prisma;
+// Em desenvolvimento, salvar na global para evitar múltiplas instâncias
+if (process.env.NODE_ENV !== 'production') {
+  global.__prisma = prisma;
 }
 
 // Graceful shutdown
