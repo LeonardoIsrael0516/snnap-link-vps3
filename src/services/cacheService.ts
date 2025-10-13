@@ -5,15 +5,30 @@ class CacheService {
   private isConnected: boolean = false;
 
   constructor() {
-    const redisUrl = process.env.REDIS_URL;
+    // Tentar REDIS_URL primeiro, depois variáveis separadas do Upstash
+    let redisConfig;
     
-    if (!redisUrl) {
-      console.warn('⚠️  REDIS_URL não configurada, cache desabilitado');
+    if (process.env.REDIS_URL) {
+      redisConfig = process.env.REDIS_URL;
+      console.log('✅ Redis: Usando REDIS_URL');
+    } else if (process.env.REDIS_HOST && process.env.REDIS_PORT && process.env.REDIS_PASSWORD) {
+      // Construir URL do Upstash
+      redisConfig = {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT),
+        password: process.env.REDIS_PASSWORD,
+        tls: {
+          servername: process.env.REDIS_HOST
+        }
+      };
+      console.log('✅ Redis: Usando variáveis separadas do Upstash');
+    } else {
+      console.warn('⚠️  Redis não configurado (REDIS_URL ou REDIS_HOST/PORT/PASSWORD), cache desabilitado');
       this.redis = null as any;
       return;
     }
     
-    this.redis = new Redis(redisUrl, {
+    this.redis = new Redis(redisConfig, {
       maxRetriesPerRequest: 3,
       enableAutoPipelining: true,
       enableOfflineQueue: false,
