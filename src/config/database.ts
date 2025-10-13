@@ -12,7 +12,7 @@ console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]
 
 // Configuração para evitar prepared statements duplicados
 const prismaOptions = {
-  log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+  log: process.env.NODE_ENV === 'production' ? ['error'] as const : ['query', 'error', 'warn'] as const,
   datasources: {
     db: {
       url: DATABASE_URL + '?connection_limit=1&pool_timeout=20',
