@@ -1,4 +1,4 @@
-import { PrismaClient, LogLevel } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 // Solução ULTRA RADICAL: usar connection pooling e desabilitar prepared statements
 declare global {
@@ -11,12 +11,9 @@ const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahoz
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
 // Configuração para evitar prepared statements duplicados
-const productionLog: LogLevel[] = ['error'];
-const developmentLog: LogLevel[] = ['query', 'error', 'warn'];
-
 const prismaOptions = {
-  log: process.env.NODE_ENV === 'production' ? productionLog : developmentLog,
-};
+  log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+} as const;
 
 // Criar uma única instância global do Prisma Client
 const prisma = global.__prisma || new PrismaClient(prismaOptions);
