@@ -101,8 +101,8 @@ router.get('/', verifyJWT, ensureUserExists, async (req: Request, res: Response)
     const userRole = (req as any).user.role;
     console.log('👤 User ID:', userId, 'Role:', userRole);
 
-    // Todos os usuários (incluindo admin) veem apenas suas próprias páginas
-    const whereClause = { userId };
+    // Admin vê todas as páginas, usuários normais veem apenas suas próprias
+    const whereClause = userRole === 'ADMIN' ? {} : { userId };
     console.log('🔍 Where clause:', JSON.stringify(whereClause));
 
     const pages = await prisma.aiPage.findMany({
