@@ -5,7 +5,7 @@ export async function creditSignupReward(referredUserId: string) {
     console.log(`🎁 Verificando recompensa de indicação para usuário: ${referredUserId}`);
     
     // Fazer requisição para o backend para processar a recompensa
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = process.env.BACKEND_URL || 'https://snnap-backend.onrender.com';
     console.log(`🔗 Fazendo requisição para: ${backendUrl}/api/referrals/credit-signup-reward`);
     
     const response = await fetch(`${backendUrl}/api/referrals/credit-signup-reward`, {

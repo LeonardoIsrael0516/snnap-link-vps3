@@ -17,7 +17,7 @@ interface CustomDomainRequest extends Request {
  */
 async function fetchCustomDomain(domain: string): Promise<CustomDomain | null> {
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = process.env.BACKEND_URL || 'https://snnap-backend.onrender.com';
     const response = await fetch(`${backendUrl}/api/domains/lookup`, {
       method: 'POST',
       headers: {
