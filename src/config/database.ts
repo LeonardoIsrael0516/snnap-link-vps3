@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-// Solução mais drástica: usar uma única instância global
+// Solução ULTRA RADICAL: usar connection pooling e desabilitar prepared statements
 declare global {
   var __prisma: PrismaClient | undefined;
 }
@@ -10,10 +10,18 @@ const DATABASE_URL = "postgresql://postgres:Da05As02He02$@db.awetbsslwdbltvhahoz
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
 
-// Criar uma única instância global do Prisma Client
-const prisma = global.__prisma || new PrismaClient({
+// Configuração para evitar prepared statements duplicados
+const prismaOptions = {
   log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
-});
+  datasources: {
+    db: {
+      url: DATABASE_URL + '?connection_limit=1&pool_timeout=20',
+    },
+  },
+};
+
+// Criar uma única instância global do Prisma Client
+const prisma = global.__prisma || new PrismaClient(prismaOptions);
 
 // Em desenvolvimento, salvar na global para evitar múltiplas instâncias
 if (process.env.NODE_ENV !== 'production') {
