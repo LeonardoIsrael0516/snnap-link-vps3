@@ -10,7 +10,7 @@ import { cacheService } from './cacheService';
 const mainDbPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.MAIN_DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/meulink"
+      url: process.env.MAIN_DATABASE_URL
     }
   }
 });

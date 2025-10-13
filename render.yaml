@@ -41,3 +41,4 @@ databases:
     plan: starter
     databaseName: snnap_link_ai
     user: snnap_ai_user
+

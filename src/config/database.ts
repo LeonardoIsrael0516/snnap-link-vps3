@@ -6,10 +6,30 @@ declare global {
 }
 
 // Banco de dados do microserviço - URL vem da variável de ambiente
-const DATABASE_URL = process.env.DATABASE_URL;
+let DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   throw new Error('❌ DATABASE_URL não está definida nas variáveis de ambiente');
+}
+
+// Configurar URL do banco com parâmetros de conexão para produção
+if (process.env.NODE_ENV === 'production' && DATABASE_URL) {
+  try {
+    // Adicionar parâmetros de conexão sem modificar a URL original
+    const url = new URL(DATABASE_URL);
+    
+    // Parâmetros otimizados para produção (funciona com qualquer provedor)
+    url.searchParams.set('connection_limit', '5');
+    url.searchParams.set('pool_timeout', '20');
+    url.searchParams.set('connect_timeout', '60');
+    // Preserva a porta original da DATABASE_URL
+    // Funciona com Supabase, AWS RDS, PostgreSQL, etc.
+    
+    DATABASE_URL = url.toString();
+  } catch (error) {
+    console.error('❌ Erro ao processar DATABASE_URL:', error);
+    // Usar URL original se houver erro
+  }
 }
 
 console.log('🗄️  Conectando no banco de dados:', DATABASE_URL.split('@')[1]?.split('?')[0]);
