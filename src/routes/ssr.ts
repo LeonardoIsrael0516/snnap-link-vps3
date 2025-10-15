@@ -875,45 +875,14 @@ router.get('/', async (req: Request, res: Response) => {
       return res.redirect(`/root`);
     }
     
-    // If not a custom domain, return a default response
-    return res.status(404).send(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Link AI</title>
-      </head>
-      <body>
-        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
-          <div style="text-align: center;">
-            <h1 style="font-size: 2rem; margin-bottom: 1rem;">Link AI Microservice</h1>
-            <p style="color: #666;">Acesse uma página específica através de seu slug.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
+    // Se não for um domínio customizado, redirecionar para o frontend
+    const frontendUrl = process.env.FRONTEND_URL || 'https://snnap-ai.onrender.com';
+    return res.redirect(frontendUrl);
   } catch (error) {
     console.error('Erro ao processar solicitação root:', error);
-    return res.status(500).send(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Erro</title>
-      </head>
-      <body>
-        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
-          <div style="text-align: center;">
-            <h1 style="font-size: 2rem; margin-bottom: 1rem;">500 - Erro interno</h1>
-            <p style="color: #666;">Ocorreu um erro ao carregar a página.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
+    // Em caso de erro, também redirecionar para o frontend
+    const frontendUrl = process.env.FRONTEND_URL || 'https://snnap-ai.onrender.com';
+    return res.redirect(frontendUrl);
   }
 });
 

@@ -35,6 +35,10 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         value: https://snnap-ai.onrender.com,https://snnap-pay.onrender.com,https://snnap-api.onrender.com
+      - key: FRONTEND_URL
+        value: https://snnap-ai.onrender.com
+      - key: BACKEND_URL
+        value: https://snnap-backend.onrender.com
 
 databases:
   - name: snnap-link-ai-db
