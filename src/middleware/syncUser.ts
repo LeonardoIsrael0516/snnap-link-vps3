@@ -89,6 +89,23 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
 
       if (!mainUser) {
         console.error(`❌ Usuário ${userId} não encontrado nem no banco principal!`);
+        console.log('🔄 Isso pode acontecer se o banco principal foi resetado. Limpando referências antigas...');
+        
+        // Limpar qualquer referência antiga no banco local
+        try {
+          await prisma.user.deleteMany({
+            where: {
+              OR: [
+                { id: userId },
+                { email: req.user.email }
+              ]
+            }
+          });
+          console.log('✅ Referências antigas removidas do banco local');
+        } catch (cleanupError) {
+          console.log('ℹ️ Nenhuma referência antiga encontrada para limpar');
+        }
+        
         return res.status(404).json({ 
           error: 'Usuário não encontrado. Faça login novamente.' 
         });
