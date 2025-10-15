@@ -61,6 +61,15 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
       console.log('🔍 Conectando ao banco principal...');
       console.log('🔍 MAIN_DATABASE_URL configurada:', process.env.MAIN_DATABASE_URL ? 'SIM' : 'NÃO');
       
+      // Testar conectividade com o banco principal
+      try {
+        await mainDbPrisma.$connect();
+        console.log('✅ Conexão com banco principal estabelecida');
+      } catch (connectError) {
+        console.error('❌ Erro ao conectar com banco principal:', connectError);
+        throw connectError;
+      }
+      
       // Buscar usuário do banco principal
       const mainUser = await mainDbPrisma.user.findUnique({
         where: { id: userId },
@@ -86,7 +95,8 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
       }
 
       // Criar ou atualizar usuário no banco local
-      await prisma.user.upsert({
+      console.log('🔄 Criando/atualizando usuário no banco local...');
+      const upsertedUser = await prisma.user.upsert({
         where: { id: mainUser.id },
         update: {
           name: mainUser.name,
@@ -107,6 +117,7 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
           updatedAt: mainUser.updatedAt,
         }
       });
+      console.log('✅ Usuário criado/atualizado no banco local:', { id: upsertedUser.id, email: upsertedUser.email });
 
       console.log(`✅ Usuário ${mainUser.email} sincronizado com sucesso!`);
       
