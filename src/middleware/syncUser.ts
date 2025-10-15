@@ -45,9 +45,12 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
       }
     });
 
+    console.log(`🔍 Busca no banco local - userId: ${userId}, email: ${req.user.email}`);
+    console.log(`🔍 Usuário encontrado:`, userExists ? { id: userExists.id, email: userExists.email } : 'Nenhum');
+
     if (userExists) {
       // Usuário já existe, continuar
-      console.log(`✅ Usuário já existe no banco local: ${userExists.email}`);
+      console.log(`✅ Usuário já existe no banco local: ${userExists.email} (ID: ${userExists.id})`);
       return next();
     }
 
@@ -56,6 +59,7 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
 
     try {
       console.log('🔍 Conectando ao banco principal...');
+      console.log('🔍 MAIN_DATABASE_URL configurada:', process.env.MAIN_DATABASE_URL ? 'SIM' : 'NÃO');
       
       // Buscar usuário do banco principal
       const mainUser = await mainDbPrisma.user.findUnique({
@@ -71,6 +75,8 @@ export const ensureUserExists = async (req: AuthRequest, res: Response, next: Ne
           updatedAt: true,
         }
       });
+
+      console.log('🔍 Usuário encontrado no banco principal:', mainUser ? { id: mainUser.id, email: mainUser.email } : 'Nenhum');
 
       if (!mainUser) {
         console.error(`❌ Usuário ${userId} não encontrado nem no banco principal!`);
