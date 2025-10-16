@@ -86,3 +86,5 @@ npm run dev
 - ✅ Importação manual funcionará
 - ✅ Usuários serão sincronizados automaticamente
 - ✅ Sem mais erro de foreign key
+
+

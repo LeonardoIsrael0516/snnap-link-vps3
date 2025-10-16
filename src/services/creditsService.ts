@@ -55,6 +55,100 @@ export async function hasCredits(userId: string, requiredCredits: number): Promi
 }
 
 /**
+ * Verifica o status detalhado do usuário para determinar qual modal mostrar
+ */
+export async function checkUserCreditStatus(userId: string, requiredCredits: number): Promise<{
+  hasCredits: boolean;
+  hasActivePlan: boolean;
+  isFreePlan: boolean;
+  availableCredits: number;
+  requiredCredits: number;
+  planName: string;
+  status: 'NO_PLAN' | 'NO_CREDITS' | 'SUFFICIENT_CREDITS';
+  message: string;
+}> {
+  try {
+    console.log(`🔍 checkUserCreditStatus - Verificando status detalhado para usuário ${userId}, necessário: ${requiredCredits}`);
+    
+    const userPlan = await (prisma as any).userPlan.findUnique({
+      where: { userId },
+      include: {
+        plan: true
+      }
+    });
+
+    if (!userPlan) {
+      console.log(`❌ checkUserCreditStatus - Usuário ${userId} não possui plano`);
+      return {
+        hasCredits: false,
+        hasActivePlan: false,
+        isFreePlan: true,
+        availableCredits: 0,
+        requiredCredits,
+        planName: 'Nenhum',
+        status: 'NO_PLAN',
+        message: 'Usuário não possui plano ativo'
+      };
+    }
+
+    if (userPlan.status !== 'ACTIVE') {
+      console.log(`❌ checkUserCreditStatus - Plano do usuário ${userId} não está ativo (status: ${userPlan.status})`);
+      return {
+        hasCredits: false,
+        hasActivePlan: false,
+        isFreePlan: userPlan.plan?.name === 'Free',
+        availableCredits: userPlan.creditsAvailable,
+        requiredCredits,
+        planName: userPlan.plan?.name || 'Desconhecido',
+        status: 'NO_PLAN',
+        message: 'Plano não está ativo'
+      };
+    }
+
+    const hasEnoughCredits = userPlan.creditsAvailable >= requiredCredits;
+    const isFreePlan = userPlan.plan?.name === 'Free';
+
+    if (hasEnoughCredits) {
+      console.log(`✅ checkUserCreditStatus - Usuário ${userId} tem créditos suficientes`);
+      return {
+        hasCredits: true,
+        hasActivePlan: true,
+        isFreePlan,
+        availableCredits: userPlan.creditsAvailable,
+        requiredCredits,
+        planName: userPlan.plan?.name || 'Desconhecido',
+        status: 'SUFFICIENT_CREDITS',
+        message: 'Créditos suficientes'
+      };
+    } else {
+      console.log(`⚠️ checkUserCreditStatus - Usuário ${userId} tem plano ativo mas sem créditos suficientes`);
+      return {
+        hasCredits: false,
+        hasActivePlan: true,
+        isFreePlan,
+        availableCredits: userPlan.creditsAvailable,
+        requiredCredits,
+        planName: userPlan.plan?.name || 'Desconhecido',
+        status: 'NO_CREDITS',
+        message: `Créditos insuficientes. Disponível: ${userPlan.creditsAvailable}, Necessário: ${requiredCredits}`
+      };
+    }
+  } catch (error) {
+    console.error('❌ checkUserCreditStatus - Erro ao verificar status:', error);
+    return {
+      hasCredits: false,
+      hasActivePlan: false,
+      isFreePlan: true,
+      availableCredits: 0,
+      requiredCredits,
+      planName: 'Erro',
+      status: 'NO_PLAN',
+      message: 'Erro ao verificar status do usuário'
+    };
+  }
+}
+
+/**
  * Consome créditos do usuário
  */
 export async function consumeCredits(

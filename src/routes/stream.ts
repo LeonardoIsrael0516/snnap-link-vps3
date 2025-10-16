@@ -5,7 +5,7 @@ import { generatePageWithAI } from '../services/aiService';
 import { verifyJWT } from '../middleware/auth';
 import { ensureUserExists } from '../middleware/syncUser';
 import { generateSlug } from '../utils/slug';
-import { hasCredits, consumeCredits, calculatePageCreationCost, calculatePageEditCost } from '../services/creditsService';
+import { hasCredits, consumeCredits, calculatePageCreationCost, calculatePageEditCost, checkUserCreditStatus } from '../services/creditsService';
 import { creditSignupReward } from '../utils/referralRewards';
 
 const router = Router();
@@ -118,24 +118,29 @@ router.post('/', verifyJWT, ensureUserExists, async (req: Request, res: Response
     const requiredCredits = isEditRequest ? 1.4 : 2; // Custo específico para cada ação
     console.log(`🔍 Verificando créditos para ${isEditRequest ? 'edição' : 'criação'} de página com IA - usuário: ${userId}`);
     
-    const hasEnoughCredits = await hasCredits(userId, requiredCredits);
+    const creditStatus = await checkUserCreditStatus(userId, requiredCredits);
     
-    console.log(`💰 Resultado da verificação de créditos: ${hasEnoughCredits}`);
+    console.log(`💰 Status detalhado do usuário:`, creditStatus);
     
-           if (!hasEnoughCredits) {
-             console.log(`❌ Usuário ${userId} não tem créditos suficientes para ${isEditRequest ? 'editar' : 'criar'} página`);
-             const errorData = {
-               type: 'error',
-               error: `INSUFFICIENT_CREDITS:${requiredCredits}:${isEditRequest ? 'edição' : 'criação'}`,
-               code: 'INSUFFICIENT_CREDITS',
-               requiredCredits,
-               action: isEditRequest ? 'edição' : 'criação'
-             };
-             console.log('📤 Enviando erro de créditos insuficientes:', JSON.stringify(errorData));
-             res.write(`data: ${JSON.stringify(errorData)}\n\n`);
-             res.end();
-             return;
-           }
+    if (!creditStatus.hasCredits) {
+      console.log(`❌ Usuário ${userId} não tem créditos suficientes para ${isEditRequest ? 'editar' : 'criar'} página`);
+      const errorData = {
+        type: 'error',
+        error: `INSUFFICIENT_CREDITS:${requiredCredits}:${isEditRequest ? 'edição' : 'criação'}:${creditStatus.status}:${creditStatus.hasActivePlan}:${creditStatus.isFreePlan}:${creditStatus.planName}:${creditStatus.availableCredits}`,
+        code: 'INSUFFICIENT_CREDITS',
+        requiredCredits,
+        action: isEditRequest ? 'edição' : 'criação',
+        status: creditStatus.status,
+        hasActivePlan: creditStatus.hasActivePlan,
+        isFreePlan: creditStatus.isFreePlan,
+        planName: creditStatus.planName,
+        availableCredits: creditStatus.availableCredits
+      };
+      console.log('📤 Enviando erro de créditos insuficientes:', JSON.stringify(errorData));
+      res.write(`data: ${JSON.stringify(errorData)}\n\n`);
+      res.end();
+      return;
+    }
     
     console.log(`✅ Usuário ${userId} tem créditos suficientes para ${isEditRequest ? 'editar' : 'criar'} página`);
 
